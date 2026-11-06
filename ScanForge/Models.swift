@@ -23,4 +23,5 @@ struct ScanItem: Identifiable {
     var mode: ScanMode
     var date: Date = .now
     var thumbnail: String = "cube.transparent"
+    var aiEnhanced: Bool = false
 }
