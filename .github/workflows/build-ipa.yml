@@ -1,0 +1,36 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app || sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build archive
+        run: |
+          xcodebuild -project ScanForge.xcodeproj \
+            -scheme ScanForge \
+            -configuration Release \
+            -archivePath $PWD/build/ScanForge.xcarchive \
+            -destination 'generic/platform=iOS' \
+            archive CODE_SIGNING_ALLOWED=NO
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ScanForge.xcarchive/Products/Applications/ScanForge.app Payload/
+          zip -r ScanForge.ipa Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScanForge-IPA
+          path: ScanForge.ipa
