@@ -7,7 +7,7 @@ struct ScannerView: View {
     @State private var progress: Double = 0.25
     @State private var aiEnhanceEnabled = true
     @State private var aiStatus = "AI ready"
-    @Namespace private var ns
+    @State private var showRefine = false
     
     var body: some View {
         ZStack {
@@ -48,7 +48,6 @@ struct ScannerView: View {
                 Spacer()
                 
                 VStack(spacing: 16) {
-                    // AI Enhance toggle
                     Toggle(isOn: $aiEnhanceEnabled) {
                         Label(aiEnhanceEnabled ? "AI Enhance On" : "AI Enhance Off", systemImage: "wand.and.stars")
                             .font(.subheadline.weight(.semibold))
@@ -75,13 +74,9 @@ struct ScannerView: View {
                     Button("Capture Frame") {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                             progress = min(progress + 0.15, 1.0)
-                            if progress > 0.9 { currentStage = .mesh }
-                            if aiEnhanceEnabled {
-                                aiStatus = "AI refining depth…"
-                                // Real call: AIEnhancer.shared.enhanceDepth(...)
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                                    aiStatus = "AI refinement applied"
-                                }
+                            if progress > 0.9 { 
+                                currentStage = .refine
+                                showRefine = true
                             }
                         }
                     }
@@ -97,6 +92,9 @@ struct ScannerView: View {
         .onAppear {
             AIEnhancer.shared.loadModel()
             aiStatus = AIEnhancer.shared.isReady ? "AI model loaded" : "Drop DepthAnything model to enable"
+        }
+        .navigationDestination(isPresented: $showRefine) {
+            RefineView()
         }
         .navigationBarTitleDisplayMode(.inline)
     }
