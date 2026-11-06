@@ -1,108 +1,105 @@
 import SwiftUI
 
-enum ScanMode: String, CaseIterable, Identifiable {
-    case lidar = "LiDAR Mesh"
-    case room = "RoomPlan"
-    case object = "Object Capture"
-    var id: String { rawValue }
-    var icon: String {
-        switch self {
-        case .lidar: "sensor.tag.radiowaves.forward"
-        case .room: "square.3.layers.3d"
-        case .object: "cube.transparent"
+struct ContentView: View {
+    @State private var selectedTab = 0
+    
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            HomeView()
+                .tabItem { Label("Home", systemImage: "view.3d") }
+                .tag(0)
+            LibraryView()
+                .tabItem { Label("Library", systemImage: "square.stack.3d.up") }
+                .tag(1)
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "gear") }
+                .tag(2)
         }
+        .tint(.cyan)
     }
 }
 
-struct ContentView: View {
+struct HomeView: View {
     @State private var selectedMode: ScanMode = .lidar
-    @State private var isScanning = false
-    @State private var scanProgress: Double = 0
+    @State private var showScanner = false
     @Namespace private var ns
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
-                // Bioluminescent gradient background
                 LinearGradient(
-                    colors: [.black, .indigo.opacity(0.6), .cyan.opacity(0.3)],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    colors: [.black, .indigo.opacity(0.7), .cyan.opacity(0.2)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
-
-                VStack(spacing: 24) {
-                    Text("ScanForge")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(.white)
-
-                    // Mode selector with glass
-                    GlassEffectContainer(spacing: 12) {
-                        HStack(spacing: 12) {
+                
+                VStack(spacing: 32) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "view.3d")
+                            .font(.system(size: 56, weight: .ultraLight))
+                            .foregroundStyle(.cyan)
+                            .symbolEffect(.pulse, options: .repeating)
+                        Text("ScanForge")
+                            .font(.largeTitle.bold())
+                            .foregroundStyle(.white)
+                        Text("Pro 3D Scanning & Printing")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                    .padding(.top, 40)
+                    
+                    GlassEffectContainer(spacing: 16) {
+                        VStack(spacing: 12) {
                             ForEach(ScanMode.allCases) { mode in
                                 Button {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                        selectedMode = mode
-                                    }
+                                    selectedMode = mode
+                                    showScanner = true
                                 } label: {
-                                    Label(mode.rawValue, systemImage: mode.icon)
-                                        .font(.subheadline.weight(.semibold))
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 10)
+                                    HStack {
+                                        Image(systemName: mode.icon)
+                                            .font(.title2)
+                                            .frame(width: 36)
+                                        VStack(alignment: .leading) {
+                                            Text(mode.rawValue).font(.headline)
+                                            Text("Start capture").font(.caption).foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                    }
+                                    .padding()
                                 }
-                                .glassEffect(
-                                    .regular.tint(selectedMode == mode ? .cyan.opacity(0.4) : .clear).interactive(),
-                                    in: .capsule
-                                )
-                                .matchedGeometryEffect(id: mode.id, in: ns)
+                                .glassEffect(.regular.tint(selectedMode == mode ? .cyan.opacity(0.3) : .clear).interactive(), in: .rect(cornerRadius: 16))
                             }
                         }
                     }
                     .padding(.horizontal)
-
-                    Spacer()
-
-                    // Scan stage indicator
-                    VStack(spacing: 16) {
-                        Text(isScanning ? "Scanning..." : "Ready to Capture")
-                            .font(.headline)
-                            .foregroundStyle(.white.opacity(0.8))
-
-                        ProgressView(value: scanProgress)
-                            .progressViewStyle(.linear)
-                            .tint(.cyan)
-                            .scaleEffect(y: 2)
-                            .animation(.spring, value: scanProgress)
-
-                        Button(isScanning ? "Stop" : "Start Scan") {
-                            withAnimation(.spring) {
-                                isScanning.toggle()
-                                if isScanning {
-                                    // Simulate progress for demo; real ARSession would drive this
-                                    scanProgress = 0
-                                    Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { t in
-                                        scanProgress = min(scanProgress + 0.02, 1.0)
-                                        if scanProgress >= 1.0 { t.invalidate() }
-                                    }
-                                } else {
-                                    scanProgress = 0
-                                }
-                            }
-                        }
-                        .font(.title3.weight(.semibold))
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 14)
-                        .glassEffect(.regular.tint(.cyan.opacity(0.3)).interactive(), in: .capsule)
-                        .sensoryFeedback(.impact, trigger: isScanning)
-                    }
-                    .padding()
-
+                    
                     Spacer()
                 }
-                .padding()
             }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $showScanner) {
+                ScannerView(mode: $selectedMode)
+            }
+        }
+    }
+}
+
+struct SettingsView: View {
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Export") {
+                    Label("OBJ / STL / USDZ", systemImage: "square.and.arrow.up")
+                    Label("Auto-optimize for print", systemImage: "printer")
+                }
+                Section("Pro Features") {
+                    Label("LiDAR scene reconstruction", systemImage: "sensor.tag.radiowaves.forward")
+                    Label("RoomPlan structured capture", systemImage: "square.3.layers.3d")
+                    Label("Object Capture photogrammetry", systemImage: "cube.transparent")
+                }
+            }
+            .navigationTitle("Settings")
         }
     }
 }
